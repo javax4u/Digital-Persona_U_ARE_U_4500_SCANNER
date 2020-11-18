@@ -1,3 +1,4 @@
+
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,418 +27,421 @@ import com.digitalpersona.uareu.Fmd;
 import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.UareUException;
 import com.digitalpersona.uareu.UareUGlobal;
+import java.nio.charset.StandardCharsets;
 
 public class Enrollment extends JPanel implements ActionListener {
 
-	public class EnrollmentThread extends Thread implements
-			Engine.EnrollmentCallback {
-		public static final String ACT_PROMPT = "enrollment_prompt";
-		public static final String ACT_CAPTURE = "enrollment_capture";
-		public static final String ACT_FEATURES = "enrollment_features";
-		public static final String ACT_DONE = "enrollment_done";
-		public static final String ACT_CANCELED = "enrollment_canceled";
-		public static final String ACT_SAVE = "save";
+    public class EnrollmentThread extends Thread implements
+            Engine.EnrollmentCallback {
 
-		public class EnrollmentEvent extends ActionEvent {
-			private static final long serialVersionUID = 102;
+        public static final String ACT_PROMPT = "enrollment_prompt";
+        public static final String ACT_CAPTURE = "enrollment_capture";
+        public static final String ACT_FEATURES = "enrollment_features";
+        public static final String ACT_DONE = "enrollment_done";
+        public static final String ACT_CANCELED = "enrollment_canceled";
+        public static final String ACT_SAVE = "save";
 
-			public Reader.CaptureResult capture_result;
-			public Reader.Status reader_status;
-			public UareUException exception;
-			public Fmd enrollment_fmd;
+        public class EnrollmentEvent extends ActionEvent {
 
-			public EnrollmentEvent(Object source, String action, Fmd fmd,
-					Reader.CaptureResult cr, Reader.Status st, UareUException ex) {
-				super(source, ActionEvent.ACTION_PERFORMED, action);
-				capture_result = cr;
-				reader_status = st;
-				exception = ex;
-				enrollment_fmd = fmd;
-			}
-		}
+            private static final long serialVersionUID = 102;
 
-		private final Reader m_reader;
-		private CaptureThread m_capture;
-		private final ActionListener m_listener;
-		private boolean m_bCancel;
+            public Reader.CaptureResult capture_result;
+            public Reader.Status reader_status;
+            public UareUException exception;
+            public Fmd enrollment_fmd;
 
-		protected EnrollmentThread(Reader reader, ActionListener listener) {
-			m_reader = reader;
-			m_listener = listener;
-		}
+            public EnrollmentEvent(Object source, String action, Fmd fmd,
+                    Reader.CaptureResult cr, Reader.Status st, UareUException ex) {
+                super(source, ActionEvent.ACTION_PERFORMED, action);
+                capture_result = cr;
+                reader_status = st;
+                exception = ex;
+                enrollment_fmd = fmd;
+            }
+        }
 
-		@Override
-		public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
-			Engine.PreEnrollmentFmd prefmd = null;
+        private final Reader m_reader;
+        private CaptureThread m_capture;
+        private final ActionListener m_listener;
+        private boolean m_bCancel;
 
-			while (null == prefmd && !m_bCancel) {
-				// start capture thread
-				m_capture = new CaptureThread(m_reader, false,
-						Fid.Format.ISO_19794_4_2005,
-						Reader.ImageProcessing.IMG_PROC_DEFAULT);
-				m_capture.start(null);
+        protected EnrollmentThread(Reader reader, ActionListener listener) {
+            m_reader = reader;
+            m_listener = listener;
+        }
 
-				// prompt for finger
-				SendToListener(ACT_PROMPT, null, null, null, null);
+        @Override
+        public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
+            Engine.PreEnrollmentFmd prefmd = null;
 
-				// wait till done
-				m_capture.join(0);
+            while (null == prefmd && !m_bCancel) {
+                // start capture thread
+                m_capture = new CaptureThread(m_reader, false,
+                        Fid.Format.ISO_19794_4_2005,
+                        Reader.ImageProcessing.IMG_PROC_DEFAULT);
+                m_capture.start(null);
 
-				// check result
-				CaptureThread.CaptureEvent evt = m_capture
-						.getLastCaptureEvent();
-				if (null != evt.capture_result) {
-					if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
-						// capture canceled, return null
-						break;
-					} else if (null != evt.capture_result.image
-							&& Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
-						// Send image
-						SendToListener(ACT_CAPTURE, null, evt.capture_result,
-								null, null);
+                // prompt for finger
+                SendToListener(ACT_PROMPT, null, null, null, null);
 
-						// acquire engine
-						Engine engine = UareUGlobal.GetEngine();
+                // wait till done
+                m_capture.join(0);
 
-						try {
-							// extract features
+                // check result
+                CaptureThread.CaptureEvent evt = m_capture
+                        .getLastCaptureEvent();
+                if (null != evt.capture_result) {
+                    if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
+                        // capture canceled, return null
+                        break;
+                    } else if (null != evt.capture_result.image
+                            && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
+                        // Send image
+                        SendToListener(ACT_CAPTURE, null, evt.capture_result,
+                                null, null);
 
-							Fmd fmd = engine.CreateFmd(
-									evt.capture_result.image,
-									Fmd.Format.DP_PRE_REG_FEATURES);
+                        // acquire engine
+                        Engine engine = UareUGlobal.GetEngine();
 
-							// return prefmd
-							prefmd = new Engine.PreEnrollmentFmd();
-							prefmd.fmd = fmd;
-							prefmd.view_index = 0;
+                        try {
+                            // extract features
 
-							// send success
-							SendToListener(ACT_FEATURES, null, null, null, null);
-						} catch (UareUException e) {
-							// send extraction error
-							SendToListener(ACT_FEATURES, null, null, null, e);
-						}
-					} else {
-						// send quality result
-						SendToListener(ACT_CAPTURE, null, evt.capture_result,
-								evt.reader_status, evt.exception);
-					}
-				} else {
-					// send capture error
-					SendToListener(ACT_CAPTURE, null, evt.capture_result,
-							evt.reader_status, evt.exception);
-				}
-			}
+                            Fmd fmd = engine.CreateFmd(
+                                    evt.capture_result.image,
+                                    Fmd.Format.DP_PRE_REG_FEATURES);
 
-			return prefmd;
-		}
+                            // return prefmd
+                            prefmd = new Engine.PreEnrollmentFmd();
+                            prefmd.fmd = fmd;
+                            prefmd.view_index = 0;
 
-		public void cancel() {
-			m_bCancel = true;
-			if (null != m_capture)
-				m_capture.cancel();
-		}
+                            // send success
+                            SendToListener(ACT_FEATURES, null, null, null, null);
+                        } catch (UareUException e) {
+                            // send extraction error
+                            SendToListener(ACT_FEATURES, null, null, null, e);
+                        }
+                    } else {
+                        // send quality result
+                        SendToListener(ACT_CAPTURE, null, evt.capture_result,
+                                evt.reader_status, evt.exception);
+                    }
+                } else {
+                    // send capture error
+                    SendToListener(ACT_CAPTURE, null, evt.capture_result,
+                            evt.reader_status, evt.exception);
+                }
+            }
 
-		private void SendToListener(String action, Fmd fmd,
-				Reader.CaptureResult cr, Reader.Status st, UareUException ex) {
-			if (null == m_listener || null == action || action.equals(""))
-				return;
+            return prefmd;
+        }
 
-			final EnrollmentEvent evt = new EnrollmentEvent(this, action, fmd,
-					cr, st, ex);
+        public void cancel() {
+            m_bCancel = true;
+            if (null != m_capture) {
+                m_capture.cancel();
+            }
+        }
 
-			// invoke listener on EDT thread
-			try {
-				javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
-					@Override
-					public void run() {
-						m_listener.actionPerformed(evt);
-					}
-				});
-			} catch (InvocationTargetException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
+        private void SendToListener(String action, Fmd fmd,
+                Reader.CaptureResult cr, Reader.Status st, UareUException ex) {
+            if (null == m_listener || null == action || action.equals("")) {
+                return;
+            }
 
-		@Override
-		public void run() {
-			// acquire engine
-			Engine engine = UareUGlobal.GetEngine();
+            final EnrollmentEvent evt = new EnrollmentEvent(this, action, fmd,
+                    cr, st, ex);
 
-			try {
-				m_bCancel = false;
-				while (!m_bCancel) {
-					// run enrollment
-					Fmd fmd = engine.CreateEnrollmentFmd(
-							Fmd.Format.DP_REG_FEATURES, this);
+            // invoke listener on EDT thread
+            try {
+                javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+                    @Override
+                    public void run() {
+                        m_listener.actionPerformed(evt);
+                    }
+                });
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
-					// send result
-					if (null != fmd) {
+        @Override
+        public void run() {
+            // acquire engine
+            Engine engine = UareUGlobal.GetEngine();
 
-						SendToListener(ACT_DONE, fmd, null, null, null);
-					} else {
-						SendToListener(ACT_CANCELED, null, null, null, null);
-						break;
-					}
-				}
-			} catch (UareUException e) {
-				JOptionPane.showMessageDialog(null,
-						"Exception during creation of data and import");
-				SendToListener(ACT_DONE, null, null, null, e);
-			}
-		}
-	}
+            try {
+                m_bCancel = false;
+                while (!m_bCancel) {
+                    // run enrollment
+                    Fmd fmd = engine.CreateEnrollmentFmd(
+                            Fmd.Format.DP_REG_FEATURES, this);
 
-	private static final long serialVersionUID = 6;
-	private static final String ACT_BACK = "back";
-	private static final String ACT_SAVE = "save";
-	private static final String ACT_SAVE_DB = "save2db";
+                    // send result
+                    if (null != fmd) {
 
-	public com.digitalpersona.uareu.Fmd enrollmentFMD;
-	private final EnrollmentThread m_enrollment;
-	private final Reader m_reader;
-	private JDialog m_dlgParent;
-	private final JTextArea m_text;
-	private final JLabel infoUsername_text;
-	private final JTextArea username_text;
-	private boolean m_bJustStarted;
-	private final JButton m_save;
-	private final JButton m_save2DB;
-	private final ImagePanel m_imagePanel;
+                        SendToListener(ACT_DONE, fmd, null, null, null);
+                    } else {
+                        SendToListener(ACT_CANCELED, null, null, null, null);
+                        break;
+                    }
+                }
+            } catch (UareUException e) {
+                JOptionPane.showMessageDialog(null,
+                        "Exception during creation of data and import");
+                SendToListener(ACT_DONE, null, null, null, e);
+            }
+        }
+    }
 
-	private Enrollment(Reader reader) {
-		m_reader = reader;
-		m_bJustStarted = true;
-		m_enrollment = new EnrollmentThread(m_reader, this);
+    private static final long serialVersionUID = 6;
+    private static final String ACT_BACK = "back";
+    private static final String ACT_SAVE = "save";
+    private static final String ACT_SAVE_DB = "save2db";
 
-		final int vgap = 5;
-		final int width = 380;
+    public com.digitalpersona.uareu.Fmd enrollmentFMD;
+    private final EnrollmentThread m_enrollment;
+    private final Reader m_reader;
+    private JDialog m_dlgParent;
+    private final JTextArea m_text;
+    private final JLabel infoUsername_text;
+    private final JTextArea username_text;
+    private boolean m_bJustStarted;
+    private final JButton m_save;
+    private final JButton m_save2DB;
+    private final ImagePanel m_imagePanel;
 
-		BoxLayout layout = new BoxLayout(this, BoxLayout.Y_AXIS);
-		setLayout(layout);
+    private Enrollment(Reader reader) {
+        m_reader = reader;
+        m_bJustStarted = true;
+        m_enrollment = new EnrollmentThread(m_reader, this);
 
-		m_imagePanel = new ImagePanel();
-		m_imagePanel.setPreferredSize(new Dimension(100, 300));
-		add(m_imagePanel);
+        final int vgap = 5;
+        final int width = 380;
 
-		m_text = new JTextArea(22, 1);
-		m_text.setEditable(false);
-		JScrollPane paneReader = new JScrollPane(m_text);
-		add(paneReader);
-		Dimension dm = paneReader.getPreferredSize();
-		dm.width = width;
-		paneReader.setPreferredSize(dm);
+        BoxLayout layout = new BoxLayout(this, BoxLayout.Y_AXIS);
+        setLayout(layout);
 
-		infoUsername_text = new JLabel("Enter Username:");
-		add(infoUsername_text);
+        m_imagePanel = new ImagePanel();
+        m_imagePanel.setPreferredSize(new Dimension(100, 300));
+        add(m_imagePanel);
 
-		username_text = new JTextArea(1, 40);
-		add(username_text);
+        m_text = new JTextArea(22, 1);
+        m_text.setEditable(false);
+        JScrollPane paneReader = new JScrollPane(m_text);
+        add(paneReader);
+        Dimension dm = paneReader.getPreferredSize();
+        dm.width = width;
+        paneReader.setPreferredSize(dm);
 
-		add(Box.createVerticalStrut(vgap));
+        infoUsername_text = new JLabel("Enter Username:");
+        add(infoUsername_text);
 
-		JButton btnBack = new JButton("Back");
-		btnBack.setActionCommand(ACT_BACK);
-		btnBack.addActionListener(this);
-		add(btnBack);
+        username_text = new JTextArea(1, 40);
+        add(username_text);
 
-		m_save = new JButton("Save to File");
-		m_save.setActionCommand(ACT_SAVE);
-		m_save.addActionListener(this);
-		m_save.setEnabled(false);
-		add(m_save);
+        add(Box.createVerticalStrut(vgap));
 
-		m_save2DB = new JButton("Save to DB");
-		m_save2DB.setActionCommand(ACT_SAVE_DB);
-		m_save2DB.addActionListener(this);
-		m_save2DB.setEnabled(false);
-		add(m_save2DB);
+        JButton btnBack = new JButton("Back");
+        btnBack.setActionCommand(ACT_BACK);
+        btnBack.addActionListener(this);
+        add(btnBack);
 
-		add(Box.createVerticalStrut(vgap));
+        m_save = new JButton("Save to File");
+        m_save.setActionCommand(ACT_SAVE);
+        m_save.addActionListener(this);
+        m_save.setEnabled(false);
+        add(m_save);
 
-		setOpaque(true);
-	}
+        m_save2DB = new JButton("Save to DB");
+        m_save2DB.setActionCommand(ACT_SAVE_DB);
+        m_save2DB.addActionListener(this);
+        m_save2DB.setEnabled(false);
+        add(m_save2DB);
 
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		if (e.getActionCommand().equals(ACT_BACK)) {
-			// destroy dialog to cancel enrollment
-			m_dlgParent.setVisible(false);
+        add(Box.createVerticalStrut(vgap));
 
-			return;
-		} else if (e.getActionCommand().equals(ACT_SAVE_DB)) {
-			//FingerDB db =  new FingerDB("localhost", "vdoxxdb", "vdoxx", "vdoxx999");
-                        FingerDB db =  new FingerDB();
-			try {
-				db.Open();
-				if (this.username_text.getText().isEmpty() == true) {
-					// Check if user already exists
-					if (db.UserExists(this.username_text.getText()) == false) {
-						// Save user to database along with fingerprint minutiae
-						db.Insert(this.username_text.getText(),
-								this.enrollmentFMD.getData());
-						m_dlgParent.setVisible(false);
-					} else {
-						JOptionPane.showMessageDialog(null,
-								"Username already taken.");
-						this.username_text.requestFocusInWindow();
-					}
+        setOpaque(true);
+    }
 
-				} else {
-					JOptionPane.showMessageDialog(null,
-							"Please enter a unique username");
-					this.username_text.requestFocusInWindow();
-				}
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getActionCommand().equals(ACT_BACK)) {
+            // destroy dialog to cancel enrollment
+            m_dlgParent.setVisible(false);
 
-			} catch (SQLException e3) {
-				JOptionPane.showMessageDialog(null, e3.getMessage());
-			}
-			try {
-				db.Close();
-			} catch (SQLException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		}
+            return;
+        } else if (e.getActionCommand().equals(ACT_SAVE_DB)) {
+            //FingerDB db =  new FingerDB("localhost", "vdoxxdb", "vdoxx", "vdoxx999");
+            FingerDB db = new FingerDB();
+            try {
+                db.Open();
+                if (this.username_text.getText().isEmpty() != true) {
+                    // Check if user already exists
+                    if (db.UserExists(this.username_text.getText()) == false) {
+                        // Save user to database along with fingerprint minutiae
+                        db.Insert(this.username_text.getText(),
+                                this.enrollmentFMD.getData());
+                        m_dlgParent.setVisible(false);
+                    } else {
+                        JOptionPane.showMessageDialog(null,
+                                "Username already taken.");
+                        this.username_text.requestFocusInWindow();
+                    }
 
-		else if (e.getActionCommand().equals(ACT_SAVE)) {
-			saveDataToFile(enrollmentFMD.getData());
-			this.m_save.setEnabled(false);
-			return;
-		} else {
+                } else {
+                    JOptionPane.showMessageDialog(null,
+                            "Please enter a unique username");
+                    this.username_text.requestFocusInWindow();
+                }
 
-			EnrollmentThread.EnrollmentEvent evt = (EnrollmentThread.EnrollmentEvent) e;
+            } catch (SQLException e3) {
+                JOptionPane.showMessageDialog(null, e3.getMessage());
+            }
+            try {
+                db.Close();
+            } catch (SQLException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+        } else if (e.getActionCommand().equals(ACT_SAVE)) {
+            saveDataToFile(enrollmentFMD.getData());
+            this.m_save.setEnabled(false);
+            return;
+        } else {
 
-			if (e.getActionCommand().equals(EnrollmentThread.ACT_PROMPT)) {
-				if (m_bJustStarted) {
-					m_text.append("Enrollment started\n");
-					m_text.append("    Put your any finger on the reader\n");
-				} else {
-					m_text.append("    Put the same finger on the reader\n");
-				}
-				m_bJustStarted = false;
-			} else if (e.getActionCommand()
-					.equals(EnrollmentThread.ACT_CAPTURE)) {
+            EnrollmentThread.EnrollmentEvent evt = (EnrollmentThread.EnrollmentEvent) e;
 
-				if (null != evt.capture_result)
-					if (evt.capture_result.image != null)
-						m_imagePanel.showImage(evt.capture_result.image);
-				System.out.println("Score is " + evt.capture_result.score);
-				System.out.println("Qualityis " + evt.capture_result.quality);
+            if (e.getActionCommand().equals(EnrollmentThread.ACT_PROMPT)) {
+                if (m_bJustStarted) {
+                    m_text.append("Enrollment started\n");
+                    m_text.append("    Put your any finger on the reader\n");
+                } else {
+                    m_text.append("    Put the same finger on the reader\n");
+                }
+                m_bJustStarted = false;
+            } else if (e.getActionCommand()
+                    .equals(EnrollmentThread.ACT_CAPTURE)) {
 
-				if (null != evt.capture_result) {
-					// MessageBox.BadQuality(evt.capture_result.quality);
-				} else if (null != evt.exception) {
+                if (null != evt.capture_result) {
+                    if (evt.capture_result.image != null) {
+                        m_imagePanel.showImage(evt.capture_result.image);
+                    }
+                }
+                System.out.println("Score is " + evt.capture_result.score);
+                System.out.println("Quality is " + evt.capture_result.quality);
+                System.out.println("Base64 String is " + m_imagePanel.getBase64String());
 
-					// MessageBox.DpError("Capture", evt.exception);
-				} else if (null != evt.reader_status) {
-					// MessageBox.BadStatus(evt.reader_status);
-				}
+                if (null != evt.capture_result) {
+                    // MessageBox.BadQuality(evt.capture_result.quality);
+                } else if (null != evt.exception) {
 
-				m_bJustStarted = false;
-			} else if (e.getActionCommand().equals(
-					EnrollmentThread.ACT_FEATURES)) {
-				if (null == evt.exception) {
-					m_text.append("    fingerprint captured, features extracted\n\n");
-				} else {
-					MessageBox.DpError("Feature extraction", evt.exception);
-				}
-				m_bJustStarted = false;
-			}
+                    // MessageBox.DpError("Capture", evt.exception);
+                } else if (null != evt.reader_status) {
+                    // MessageBox.BadStatus(evt.reader_status);
+                }
 
-			else if (e.getActionCommand().equals(EnrollmentThread.ACT_DONE)) {
-				if (null == evt.exception) {
-					String str = String
-							.format("    Enrollment template created, size: %d\n\n\nPlease save to file or verify.",
-									evt.enrollment_fmd.getData().length);
-					enrollmentFMD = evt.enrollment_fmd;
-					m_enrollment.cancel();
-					this.m_save.setEnabled(true);
-					this.m_save2DB.setEnabled(true);
-					m_text.append(str);
-				} else {
-					MessageBox.DpError("Enrollment template creation",
-							evt.exception);
-				}
-				m_bJustStarted = true;
-			} else if (e.getActionCommand().equals(
-					EnrollmentThread.ACT_CANCELED)) {
-				// canceled, destroy dialog
-				m_dlgParent.setVisible(false);
-			}
+                m_bJustStarted = false;
+            } else if (e.getActionCommand().equals(
+                    EnrollmentThread.ACT_FEATURES)) {
+                if (null == evt.exception) {
+                    m_text.append("    fingerprint captured, features extracted\n\n");
+                } else {
+                    MessageBox.DpError("Feature extraction", evt.exception);
+                }
+                m_bJustStarted = false;
+            } else if (e.getActionCommand().equals(EnrollmentThread.ACT_DONE)) {
+                if (null == evt.exception) {
+                    String str = String
+                            .format("    Enrollment template created, size: %d\n\n\nPlease save to file or verify.",
+                                    evt.enrollment_fmd.getData().length);
+                    enrollmentFMD = evt.enrollment_fmd;
+                    m_enrollment.cancel();
+                    this.m_save.setEnabled(true);
+                    this.m_save2DB.setEnabled(true);
+                    m_text.append(str);
+                } else {
+                    MessageBox.DpError("Enrollment template creation",
+                            evt.exception);
+                }
+                m_bJustStarted = true;
+            } else if (e.getActionCommand().equals(
+                    EnrollmentThread.ACT_CANCELED)) {
+                // canceled, destroy dialog
+                m_dlgParent.setVisible(false);
+            }
 
-			// cancel enrollment if any exception or bad reader status
-			if (null != evt.exception) {
-				m_dlgParent.setVisible(false);
-			} else if (null != evt.reader_status
-					&& Reader.ReaderStatus.READY != evt.reader_status.status
-					&& Reader.ReaderStatus.NEED_CALIBRATION != evt.reader_status.status) {
-				m_dlgParent.setVisible(false);
-			}
-		}
-	}
+            // cancel enrollment if any exception or bad reader status
+            if (null != evt.exception) {
+                m_dlgParent.setVisible(false);
+            } else if (null != evt.reader_status
+                    && Reader.ReaderStatus.READY != evt.reader_status.status
+                    && Reader.ReaderStatus.NEED_CALIBRATION != evt.reader_status.status) {
+                m_dlgParent.setVisible(false);
+            }
+        }
+    }
 
-	private void saveDataToFile(byte[] data) {
+    private void saveDataToFile(byte[] data) {
 
-		System.out.println(new String(data));
+        //System.out.println(new String(data,StandardCharsets.UTF_8));
+        // TODO Auto-generated method stub
+        JFileChooser fc = new JFileChooser(new File("test"));
 
-		// TODO Auto-generated method stub
-		JFileChooser fc = new JFileChooser(new File("test"));
+        fc.showSaveDialog(this);
+        if (fc.getSelectedFile() != null) {
+            OutputStream output = null;
+            try {
+                output = new BufferedOutputStream(new FileOutputStream(
+                        fc.getSelectedFile()));
+                output.write(data);
+                output.close();
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                JOptionPane.showMessageDialog(null, "Error saving file.");
+            }
+        }
+    }
 
-		fc.showSaveDialog(this);
-		if (fc.getSelectedFile() != null) {
-			OutputStream output = null;
-			try {
-				output = new BufferedOutputStream(new FileOutputStream(
-						fc.getSelectedFile()));
-				output.write(data);
-				output.close();
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				JOptionPane.showMessageDialog(null, "Error saving file.");
-			}
-		}
-	}
+    private void doModal(JDialog dlgParent) {
+        // open reader
+        try {
+            m_reader.Open(Reader.Priority.EXCLUSIVE);
+        } catch (UareUException e) {
+            MessageBox.DpError("Reader.Open()", e);
+        }
 
-	private void doModal(JDialog dlgParent) {
-		// open reader
-		try {
-			m_reader.Open(Reader.Priority.EXCLUSIVE);
-		} catch (UareUException e) {
-			MessageBox.DpError("Reader.Open()", e);
-		}
+        // start enrollment thread
+        m_enrollment.start();
 
-		// start enrollment thread
-		m_enrollment.start();
+        // bring up modal dialog
+        m_dlgParent = dlgParent;
+        m_dlgParent.setContentPane(this);
+        m_dlgParent.pack();
+        m_dlgParent.setLocationRelativeTo(null);
+        m_dlgParent.setVisible(true);
+        m_dlgParent.dispose();
 
-		// bring up modal dialog
-		m_dlgParent = dlgParent;
-		m_dlgParent.setContentPane(this);
-		m_dlgParent.pack();
-		m_dlgParent.setLocationRelativeTo(null);
-		m_dlgParent.setVisible(true);
-		m_dlgParent.dispose();
+        // stop enrollment thread
+        m_enrollment.cancel();
 
-		// stop enrollment thread
-		m_enrollment.cancel();
+        // close reader
+        try {
+            m_reader.Close();
+        } catch (UareUException e) {
+            MessageBox.DpError("Reader.Close()", e);
+        }
+    }
 
-		// close reader
-		try {
-			m_reader.Close();
-		} catch (UareUException e) {
-			MessageBox.DpError("Reader.Close()", e);
-		}
-	}
-
-	public static Fmd Run(Reader reader) {
-		JDialog dlg = new JDialog((JDialog) null, "Enrollment", true);
-		Enrollment enrollment = new Enrollment(reader);
-		enrollment.doModal(dlg);
-		return enrollment.enrollmentFMD;
-	}
+    public static Fmd Run(Reader reader) {
+        JDialog dlg = new JDialog((JDialog) null, "Enrollment", true);
+        Enrollment enrollment = new Enrollment(reader);
+        enrollment.doModal(dlg);
+        return enrollment.enrollmentFMD;
+    }
 }

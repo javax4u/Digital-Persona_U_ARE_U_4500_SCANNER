@@ -15,6 +15,8 @@ import javax.swing.JTextArea;
 
 import com.digitalpersona.uareu.Fmd;
 import com.digitalpersona.uareu.Reader;
+import com.digitalpersona.uareu.Reader.Description;
+import com.digitalpersona.uareu.Reader.Id;
 import com.digitalpersona.uareu.ReaderCollection;
 import com.digitalpersona.uareu.UareUException;
 import com.digitalpersona.uareu.UareUGlobal;
@@ -145,7 +147,10 @@ public class UareUSampleJava extends JPanel implements ActionListener {
         // initialize capture library by acquiring reader collection
         try {
             paneContent.m_collection = UareUGlobal.GetReaderCollection();
+             m_collection.GetReaders();
+            printDeviceDetail(paneContent.m_collection);
         } catch (UareUException e) {
+            e.printStackTrace();
             MessageBox.DpError("UareUGlobal.getReaderCollection()", e);
             return;
         }
@@ -163,18 +168,26 @@ public class UareUSampleJava extends JPanel implements ActionListener {
         }
     }
 
+    public static void printDeviceDetail(ReaderCollection m_collection) {
+        System.out.println("found " + m_collection.size()+" fingerprint reader");
+
+        for (Iterator<Reader> iterator = m_collection.iterator(); iterator.hasNext();) {
+            Reader next = iterator.next();
+            Id description = next.GetDescription().id;
+            System.out.println("Product_id:" + description.product_id);
+            System.out.println("Product_name:" + description.product_name);
+            System.out.println("vendor_id:" + description.vendor_id);
+            System.out.println("vendor_name:" + description.vendor_name);
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         // SwingUtilities.invokeLater(new WebcamViewerExample());
         createAndShowGUI();
         try {
             m_collection = UareUGlobal.GetReaderCollection();
             m_collection.GetReaders();
-            System.out.println("m_collection:" + m_collection);
 
-            for (Iterator<Reader> iterator = m_collection.iterator(); iterator.hasNext();) {
-                Reader next = iterator.next();
-                System.out.println("Reader:"+next.toString());
-            }
         } catch (UareUException uAreUexception) {
             // TODO Auto-generated catch block
             uAreUexception.printStackTrace();

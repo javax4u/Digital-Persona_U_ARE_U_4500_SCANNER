@@ -1,12 +1,14 @@
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -142,7 +144,7 @@ public class FingerDB {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Testing database connection");
+        System.out.println("--Testing database connection--");
         System.out.println("Inserting test data user:TestUser byte[]:TestUsersFringerprint1");
         Date date = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyymmddhhmmss");
@@ -151,7 +153,7 @@ public class FingerDB {
         //FingerDB fingerDatabase = new FingerDB("localhost", "vdoxxdb", "vdoxx", "vdoxx999");
         FingerDB fingerDatabase = new FingerDB();
         fingerDatabase.Open();
-        fingerDatabase.Insert("TestUser " + formatter.format(date), "TestUsersFringerprint1".getBytes());
+        fingerDatabase.Insert("TestUser-" + formatter.format(date), "TestUsersFringerprint1".getBytes(StandardCharsets.UTF_8));
         fingerDatabase.Close();
 
         System.out.println("Inserted data successfully");
@@ -160,7 +162,7 @@ public class FingerDB {
         fingerDatabase.Open();
         List<Record> databaseRecordList = fingerDatabase.GetAllFPData();
         for (Record record : databaseRecordList) {
-            System.out.println("userID:" + record.userID + " fmdBinary:" + record.fmdBinary.toString());
+            System.out.println("userID:" + record.userID + " \nfmdBinary:" + new String(record.fmdBinary));
         }
         fingerDatabase.Close();
 
