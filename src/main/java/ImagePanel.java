@@ -40,10 +40,10 @@ public class ImagePanel extends JPanel {
     }
 
     public static String imgToBase64String(final RenderedImage img, final String formatName) {
-        final ByteArrayOutputStream os = new ByteArrayOutputStream();
+        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try {
-            ImageIO.write(img, formatName, Base64.getEncoder().wrap(os));
-            return os.toString(StandardCharsets.ISO_8859_1.name());
+            ImageIO.write(img, formatName, Base64.getEncoder().wrap(byteArrayOutputStream));
+            return byteArrayOutputStream.toString(StandardCharsets.ISO_8859_1.name());
         } catch (final IOException ioe) {
             throw new UncheckedIOException(ioe);
         }

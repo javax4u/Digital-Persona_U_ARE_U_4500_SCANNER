@@ -142,13 +142,13 @@ public class UareUSampleJava extends JPanel implements ActionListener {
     }
 
     private static void createAndShowGUI() {
-        UareUSampleJava paneContent = new UareUSampleJava();
+        UareUSampleJava uareUSampleJava = new UareUSampleJava();
 
         // initialize capture library by acquiring reader collection
         try {
-            paneContent.m_collection = UareUGlobal.GetReaderCollection();
+            uareUSampleJava.m_collection = UareUGlobal.GetReaderCollection();
              m_collection.GetReaders();
-            printDeviceDetail(paneContent.m_collection);
+            printDeviceDetail(uareUSampleJava.m_collection);
         } catch (UareUException e) {
             e.printStackTrace();
             MessageBox.DpError("UareUGlobal.getReaderCollection()", e);
@@ -158,7 +158,7 @@ public class UareUSampleJava extends JPanel implements ActionListener {
         // run dialog
         JDialog dlg = new JDialog((JDialog) null,
                 "Finger Print Scanning @Android Ankit ", true);
-        paneContent.doModal(dlg);
+        uareUSampleJava.doModal(dlg);
 
         // release capture library by destroying reader collection
         try {
