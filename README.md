@@ -88,8 +88,36 @@ from mysql 8 onwards
 
 	GRANT ALL PRIVILEGES ON testdatabase.* TO 'test'@'%' ;
 
+### Installation cannot continue due to the following problems:-The following incompatible products are installed:DigitalPersona U are U RTE
+
+![installation_error_1.png](image/installation_error_1.png)
+
+Solution: 
+
+![folder_description.png.png](image/folder_description.png)
+
+
+### what is the download link for SDK
+	http://devportal.digitalpersona.com/fulfillment/download.php?id=132400
+	
+	Digitalpersona was acquired by crossmatch then hidglobal
+	digitalpersona.com --> crosmmatch.com --> hidglobal.com
+
+# scanner video should be shown to user
+
+	https://www.youtube.com/watch?v=3U4G3XLT7VQ
+
 ## Future scopes of improvement
 	
+Add content section on top
+
+driver download link should have 2 -3 options
+
+downloaded directory should be explained in video
+
+images of before installing driver and after installing driver should be compared in front of user
+
+make one github link for windows installer msi guide
 
 
 	
